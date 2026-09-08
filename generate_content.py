@@ -1,11 +1,10 @@
 import os
 import sys
 from google import genai
-from google.genai import types  # Import types to configure tools
 
 PROMPT_FILE = "prompt.txt"
 OUTPUT_FILE = "content.txt"
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3.6-flash" # Updated to the supported model version
 
 # 1. Validate API Key environment variable
 api_key = os.environ.get("GEMINI_API_KEY")
@@ -29,23 +28,22 @@ except Exception as e:
     print(f"Error reading '{PROMPT_FILE}': {e}")
     sys.exit(1)
 
-# 3. Initialize Google GenAI client and run query WITH Google Search Grounding
+# 3. Initialize Google GenAI client and run query
 print(f"Sending query to {MODEL_NAME} with Web Search enabled...")
 try:
     client = genai.Client(api_key=api_key)
     
-    # Configure Google Search as a tool so Gemini can fetch live links
-    config = types.GenerateContentConfig(
-        tools=[types.Tool(google_search=types.GoogleSearch())]
-    )
-    
-    response = client.models.generate_content(
+    # Use the Interactions API instead of generate_content
+    # and explicitly enable the Google Search tool so it can pull daily news
+    interaction = client.interactions.create(
         model=MODEL_NAME,
-        contents=prompt_text,
-        config=config
+        input=prompt_text,
+        tools=[{"type": "google_search"}]
     )
     
-    generated_text = response.text
+    # The output text from the interactions API
+    generated_text = interaction.output_text
+    
     if not generated_text:
         print("Warning: Gemini returned an empty response.")
         sys.exit(1)
