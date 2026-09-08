@@ -1,4 +1,4 @@
-name: Generate AI Content and Send Email
+name: Daily Newsletter
 
 on:
   schedule:
