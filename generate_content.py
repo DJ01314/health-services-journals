@@ -1,6 +1,7 @@
 import os
 import sys
 from google import genai
+from google.genai import types  # Import types to configure tools
 
 PROMPT_FILE = "prompt.txt"
 OUTPUT_FILE = "content.txt"
@@ -28,13 +29,20 @@ except Exception as e:
     print(f"Error reading '{PROMPT_FILE}': {e}")
     sys.exit(1)
 
-# 3. Initialize Google GenAI client and run query
-print(f"Sending query to {MODEL_NAME}...")
+# 3. Initialize Google GenAI client and run query WITH Google Search Grounding
+print(f"Sending query to {MODEL_NAME} with Web Search enabled...")
 try:
     client = genai.Client(api_key=api_key)
+    
+    # Configure Google Search as a tool so Gemini can fetch live links
+    config = types.GenerateContentConfig(
+        tools=[types.Tool(google_search=types.GoogleSearch())]
+    )
+    
     response = client.models.generate_content(
         model=MODEL_NAME,
-        contents=prompt_text
+        contents=prompt_text,
+        config=config
     )
     
     generated_text = response.text
