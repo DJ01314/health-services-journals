@@ -6,7 +6,7 @@ from google.genai import types
 
 PROMPT_FILE = "prompt.txt"
 OUTPUT_FILE = "content.txt"
-MODEL_NAME = "gemini-3.8-flash"
+MODEL_NAME = "gemini-3.1-pro-preview"
 
 api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
