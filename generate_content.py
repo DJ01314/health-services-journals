@@ -18,24 +18,36 @@ if not os.path.exists(PROMPT_FILE):
     sys.exit(1)
 
 try:
-    with open(PROMPT_FILE, "r", encoding="utf-8") as f:
-        prompt_text = f.read().strip()
+    with open(PROMPT_FILE, "r", encoding="utf-8") as file:
+        prompt_text = file.read().strip()
 
     if not prompt_text:
         print(f"Error: Prompt file '{PROMPT_FILE}' is empty.")
         sys.exit(1)
-except Exception as e:
-    print(f"Error reading '{PROMPT_FILE}': {e}")
+except Exception as error:
+    print(f"Error reading '{PROMPT_FILE}': {error}")
     sys.exit(1)
 
-print(f"Sending query to {MODEL_NAME} without Web Search...")
+search_instruction = """
+Use no more than two web search queries total.
+Do not perform follow-up searches.
+If reliable information cannot be found within two searches, omit it.
+"""
+
+prompt_text = f"{search_instruction}\n\n{prompt_text}"
+
+print(f"Sending query to {MODEL_NAME} with Web Search enabled...")
 
 client = genai.Client(api_key=api_key)
-config = types.GenerateContentConfig(temperature=0.1)
+
+config = types.GenerateContentConfig(
+    tools=[types.Tool(google_search=types.GoogleSearch())],
+    temperature=0.1,
+)
 
 generated_text = None
 max_retries = 3
-backoff_seconds = 12
+backoff_seconds = 60
 
 for attempt in range(1, max_retries + 1):
     try:
@@ -49,10 +61,13 @@ for attempt in range(1, max_retries + 1):
         if generated_text:
             break
 
-    except Exception as e:
-        error_msg = str(e)
+    except Exception as error:
+        error_message = str(error)
 
-        if "429" in error_msg or "too_many_requests" in error_msg.lower():
+        if (
+            "429" in error_message
+            or "too_many_requests" in error_message.lower()
+        ):
             if attempt < max_retries:
                 print(
                     f"Rate limited. Retrying in {backoff_seconds} seconds... "
@@ -62,9 +77,10 @@ for attempt in range(1, max_retries + 1):
                 backoff_seconds *= 2
             else:
                 print(f"Error: Rate limit exceeded after {max_retries} attempts.")
+                print(error_message)
                 sys.exit(1)
         else:
-            print(f"Error calling Google AI Studio API: {e}")
+            print(f"Error calling Google AI Studio API: {error}")
             sys.exit(1)
 
 if not generated_text:
@@ -72,10 +88,10 @@ if not generated_text:
     sys.exit(1)
 
 try:
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        f.write(generated_text)
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as file:
+        file.write(generated_text)
 
     print(f"Success: AI response written to '{OUTPUT_FILE}'.")
-except Exception as e:
-    print(f"Error writing to '{OUTPUT_FILE}': {e}")
+except Exception as error:
+    print(f"Error writing to '{OUTPUT_FILE}': {error}")
     sys.exit(1)
